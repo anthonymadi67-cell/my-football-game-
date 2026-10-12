@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Football Game</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #10251b; color: white; font-family: Arial, sans-serif; text-align: center; }
+h2 { margin: 12px 0; }
+#score { font-size: 22px; padding: 8px; }
+canvas { display: block; width: 100%; max-width: 700px; margin: auto; border: 3px solid white; background: #228b22; touch-action: none; }
+.controls { display: flex; justify-content: center; align-items: center; gap: 24px; padding: 16px; }
+.pad { display: grid; grid-template-columns: repeat(3, 48px); gap: 5px; }
+button { border: 0; border-radius: 12px; background: #f4f4f4; color: #111; font-weight: bold; font-size: 20px; min-width: 48px; min-height: 48px; touch-action: none; }
+#shoot { background: #ffcc33; min-width: 85px; }
+</style>
+</head>
+<body>
+<h2>⚽ MY FOOTBALL GAME</h2>
+<div id="score">GOALS: 0</div>
+<canvas id="game" width="700" height="420"></canvas>
+<div class="controls">
+  <div class="pad">
+    <span></span><button data-key="up">▲</button><span></span>
+    <button data-key="left">◀</button><button data-key="down">▼</button><button data-key="right">▶</button>
+  </div>
+  <button id="shoot">SHOOT ⚽</button>
+</div>
+<p>Move with the arrows. Get near the ball and shoot!</p>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreText = document.getElementById("score");
+const player = { x: 350, y: 315, r: 15, speed: 3 };
+const ball = { x: 350, y: 230, r: 9, vx: 0, vy: 0 };
+let goals = 0;
+const keys = {};
+const goal = { x: 275, y: 38, w: 150, h: 12 };
 
+document.querySelectorAll("[data-key]").forEach(btn => {
+  const key = btn.dataset.key;
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault(); keys[key] = true; btn.setPointerCapture(e.pointerId);
+  });
+  const release = () => keys[key] = false;
+  btn.addEventListener("pointerup", release);
+  btn.addEventListener("pointercancel", release);
+  btn.addEventListener("lostpointercapture", release);
+});
+document.getElementById("shoot").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  const dx = ball.x - player.x, dy = ball.y - player.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 65) {
+    const length = Math.hypot(dx, dy) || 1;
+    ball.vx = dx / length * 8; ball.vy = dy / length * 8;
+  }
+});
+function drawPlayer(x, y, color, label) {
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.beginPath(); ctx.ellipse(x, y + 12, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "white"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center"; ctx.fillText(label, x, y + 4);
+}
+function draw() {
+  ctx.clearRect(0, 0, 700, 420);
+  ctx.fillStyle = "#228b22"; ctx.fillRect(0, 0, 700, 420);
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = i % 2 ? "#238528" : "#2e9632"; ctx.fillRect(i * 100, 0, 100, 420);
+  }
+  ctx.strokeStyle = "white"; ctx.lineWidth = 3; ctx.strokeRect(18, 18, 664, 384);
+  ctx.beginPath(); ctx.moveTo(18, 210); ctx.lineTo(682, 210); ctx.stroke();
+  ctx.beginPath(); ctx.arc(350, 210, 55, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = "#eeeeee"; ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+  ctx.strokeStyle = "white"; ctx.strokeRect(goal.x, 18, goal.w, 32);
+  drawPlayer(350, 105, "#e53935", "2");
+  drawPlayer(player.x, player.y, "#1565ff", "1");
+  ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(ball.x, ball.y + 5, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#222"; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(ball.x, ball.y, 3, 0, Math.PI * 2); ctx.fill();
+}
+function update() {
+  if (keys.up || keys.ArrowUp) player.y -= player.speed;
+  if (keys.down || keys.ArrowDown) player.y += player.speed;
+  if (keys.left || keys.ArrowLeft) player.x -= player.speed;
+  if (keys.right || keys.ArrowRight) player.x += player.speed;
+  player.x = Math.max(35, Math.min(665, player.x));
+  player.y = Math.max(65, Math.min(385, player.y));
+  ball.x += ball.vx; ball.y += ball.vy; ball.vx *= 0.985; ball.vy *= 0.985;
+  if (ball.x < 30 || ball.x > 670) ball.vx *= -0.8;
+  if (ball.y > 390) ball.vy *= -0.8;
+  ball.x = Math.max(30, Math.min(670, ball.x)); ball.y = Math.max(30, Math.min(390, ball.y));
+  if (ball.y < 50 && ball.x > goal.x && ball.x < goal.x + goal.w) {
+    goals++; scoreText.textContent = "GOALS: " + goals;
+    ball.x = 350; ball.y = 230; ball.vx = 0; ball.vy = 0;
+  }
+  const dx = ball.x - 350, dy = ball.y - 105;
+  if (Math.hypot(dx, dy) < ball.r + 15) { ball.vx += dx * 0.12; ball.vy += Math.max(1, Math.abs(dy) * 0.08); }
+  draw(); requestAnimationFrame(update);
+}
+document.addEventListener("keydown", e => { keys[e.key] = true; });
+document.addEventListener("keyup", e => { keys[e.key] = false; });
+update();
+</script>
+</body>
+</html>
